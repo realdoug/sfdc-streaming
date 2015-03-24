@@ -1,19 +1,44 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/parnurzeal/gorequest"
+	"github.com/realdoug/go-force/force"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 )
 
+type SalesforceCreds struct {
+	ClientId      string `yaml:"client_id"`
+	ClientSecret  string `yaml:"client_secret"`
+	Username      string
+	Password      string
+	SecurityToken string `yaml:"security_token"`
+}
+
 func main() {
-	url := "http://localhost:9292/faye"
-	var params = `{"channel":"/meta/handshake", "supportedConnectionTypes":["long-polling"], "version":"1.0"}`
-	request := gorequest.New()
-	_, body, _ := request.Post(url).Set("Content-Type", "application/json").Send(params).End()
-	var data []map[string]interface{}
-	if err := json.Unmarshal([]byte(body), &data); err != nil {
+	c := make(chan int)
+	forceApi := connectToSalesforce()
+	forceApi.ConnectToStreamingApi()
+	forceApi.SubscribeToPushTopic("Tasks")
+	// subscribe to a topic by sending a PushTopic name and a callback function
+	<-c
+}
+
+func connectToSalesforce() *force.ForceApi {
+	sfyamlfile, _ := ioutil.ReadFile("salesforce_creds.yml")
+	var creds = SalesforceCreds{}
+	yaml.Unmarshal(sfyamlfile, &creds)
+	forceApi, err := force.Create(
+		"v33.0",
+		creds.ClientId,
+		creds.ClientSecret,
+		creds.Username,
+		creds.Password,
+		creds.SecurityToken,
+		"production",
+	)
+	if err != nil {
 		panic(err)
 	}
-	fmt.Println(data)
+
+	return forceApi
 }
