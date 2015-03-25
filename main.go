@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/realdoug/go-force/force"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -18,8 +19,12 @@ func main() {
 	c := make(chan int)
 	forceApi := connectToSalesforce()
 	forceApi.ConnectToStreamingApi()
-	forceApi.SubscribeToPushTopic("Tasks")
-	// subscribe to a topic by sending a PushTopic name and a callback function
+
+	callback := func(data []byte, args ...interface{}) {
+		fmt.Println(string(data))
+	}
+
+	forceApi.SubscribeToPushTopic("Tasks", callback)
 	<-c
 }
 
